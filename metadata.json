@@ -1,0 +1,5 @@
+{
+  "name": "AI Hairstyle Generator",
+  "description": "Upload a photo of yourself, describe a new hairstyle, and let AI generate a new look for you. See a side-by-side comparison of your before and after.",
+  "requestFramePermissions": []
+}

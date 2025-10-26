@@ -30,3 +30,10 @@ export const DownloadIcon: React.FC<{ className?: string }> = ({ className }) =>
     <line x1="12" y1="15" x2="12" y2="3"></line>
   </svg>
 );
+
+export const LocationIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+      <circle cx="12" cy="10" r="3"></circle>
+    </svg>
+);

@@ -6,9 +6,17 @@ import { ResultDisplay } from './components/ResultDisplay';
 import { Loader } from './components/Loader';
 import { SparklesIcon } from './components/icons';
 import { fileToBase64 } from './utils/fileUtils';
-import { generateHairstyleImage } from './services/geminiService';
+import { generateHairstyleImage, findNearbySalons } from './services/geminiService';
+import { SalonResults } from './components/SalonResults';
 
 type AppState = 'initial' | 'loading' | 'result' | 'error';
+type SalonFinderState = 'idle' | 'loading' | 'results' | 'error';
+
+type SalonResultsData = {
+  text: string;
+  links: any[]; 
+};
+
 
 const App: React.FC = () => {
   const [originalImage, setOriginalImage] = useState<File | null>(null);
@@ -17,11 +25,19 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [appState, setAppState] = useState<AppState>('initial');
 
+  const [salonFinderState, setSalonFinderState] = useState<SalonFinderState>('idle');
+  const [salonResults, setSalonResults] = useState<SalonResultsData | null>(null);
+  const [salonError, setSalonError] = useState<string | null>(null);
+
   const handleImageUpload = (file: File) => {
     setOriginalImage(file);
-    setAppState('initial');
+    // When a new image is uploaded, clear any previous results to start fresh
     setGeneratedImage(null);
     setError(null);
+    setAppState('initial');
+    setSalonFinderState('idle');
+    setSalonResults(null);
+    setSalonError(null);
   };
 
   const handleReset = () => {
@@ -30,6 +46,13 @@ const App: React.FC = () => {
     setGeneratedImage(null);
     setError(null);
     setAppState('initial');
+    setSalonFinderState('idle');
+    setSalonResults(null);
+    setSalonError(null);
+  };
+  
+  const handleStartOver = () => {
+     handleReset();
   };
 
   const handleSubmit = useCallback(async () => {
@@ -42,6 +65,7 @@ const App: React.FC = () => {
     setAppState('loading');
     setError(null);
     setGeneratedImage(null);
+    setSalonFinderState('idle');
 
     try {
       const base64Image = await fileToBase64(originalImage);
@@ -56,7 +80,54 @@ const App: React.FC = () => {
     }
   }, [originalImage, prompt]);
 
+  const handleFindSalons = useCallback(async () => {
+    setSalonFinderState('loading');
+    setSalonError(null);
+    setSalonResults(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const results = await findNearbySalons(latitude, longitude);
+          setSalonResults(results);
+          setSalonFinderState('results');
+        } catch (e) {
+          console.error(e);
+          const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
+          setSalonError(errorMessage);
+          setSalonFinderState('error');
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        let message = 'Could not get your location.';
+        if (error.code === error.PERMISSION_DENIED) {
+          message = 'Please allow location access to find nearby salons.';
+        }
+        setSalonError(message);
+        setSalonFinderState('error');
+      }
+    );
+  }, []);
+
+
   const isButtonDisabled = appState === 'loading' || !originalImage || !prompt.trim();
+
+  const SalonLoader = () => (
+    <div className="flex flex-col items-center justify-center p-6 space-y-3 mt-8">
+      <div className="w-12 h-12 border-4 border-t-teal-500 border-r-teal-500 border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+      <p className="text-md text-gray-600 font-semibold">Finding salons near you...</p>
+    </div>
+  );
+
+  const SalonError = ({ message, onRetry }: { message: string, onRetry: () => void }) => (
+      <div className="mt-8 text-center p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          <p className="font-bold">Could not find salons.</p>
+          <p>{message}</p>
+          <button onClick={onRetry} className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">Try Again</button>
+      </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-indigo-200 text-gray-800 font-sans">
@@ -72,7 +143,6 @@ const App: React.FC = () => {
               </div>
               <div>
                 <label htmlFor="prompt" className="block text-lg font-semibold mb-2 text-gray-700">2. Describe Your Dream Hairstyle</label>
-                {/* FIX: Removed redundant `disabled` prop. The form is hidden during the 'loading' state, so this check was unnecessary and caused a TypeScript error. */}
                 <input
                   id="prompt"
                   type="text"
@@ -102,7 +172,7 @@ const App: React.FC = () => {
           {appState === 'loading' && <Loader />}
           
           {appState === 'error' && error && (
-             <div className="text-center p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+             <div className="mt-8 text-center p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
                 <p className="font-bold">Oops! Something went wrong.</p>
                 <p>{error}</p>
                 <button onClick={handleReset} className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">Try Again</button>
@@ -114,10 +184,17 @@ const App: React.FC = () => {
               <ResultDisplay
                 originalImage={URL.createObjectURL(originalImage)}
                 generatedImage={generatedImage}
+                onFindSalons={handleFindSalons}
+                isFindingSalons={salonFinderState === 'loading'}
               />
+
+              {salonFinderState === 'loading' && <SalonLoader />}
+              {salonFinderState === 'error' && salonError && <SalonError message={salonError} onRetry={handleFindSalons} />}
+              {salonFinderState === 'results' && salonResults && <SalonResults results={salonResults} />}
+
               <div className="text-center mt-8">
                 <button
-                  onClick={handleReset}
+                  onClick={handleStartOver}
                   className="px-8 py-3 bg-gray-600 text-white font-semibold rounded-full hover:bg-gray-700 transition-transform transform hover:scale-105"
                 >
                   Start Over

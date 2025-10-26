@@ -1,12 +1,14 @@
 import React from 'react';
-import { DownloadIcon } from './icons';
+import { DownloadIcon, LocationIcon } from './icons';
 
 interface ResultDisplayProps {
   originalImage: string;
   generatedImage: string;
+  onFindSalons: () => void;
+  isFindingSalons: boolean;
 }
 
-export const ResultDisplay: React.FC<ResultDisplayProps> = ({ originalImage, generatedImage }) => {
+export const ResultDisplay: React.FC<ResultDisplayProps> = ({ originalImage, generatedImage, onFindSalons, isFindingSalons }) => {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-center text-gray-800">Your New Look is Ready!</h2>
@@ -18,15 +20,26 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ originalImage, gen
         <div className="flex flex-col items-center space-y-4">
           <h3 className="text-lg font-semibold text-pink-600">New Hairstyle</h3>
           <img src={generatedImage} alt="Generated Hairstyle" className="w-full h-auto object-contain rounded-xl shadow-lg" />
-           <a
-            href={generatedImage}
-            download="new-hairstyle.jpeg"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 font-semibold text-white bg-purple-600 rounded-full transition-all duration-300 transform hover:scale-105 hover:bg-purple-700 hover:shadow-lg"
-            aria-label="Download generated image"
-          >
-            <DownloadIcon className="w-5 h-5" />
-            Download Image
-          </a>
+           <div className="flex flex-wrap justify-center gap-4">
+             <a
+              href={generatedImage}
+              download="new-hairstyle.jpeg"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 font-semibold text-white bg-purple-600 rounded-full transition-all duration-300 transform hover:scale-105 hover:bg-purple-700 hover:shadow-lg"
+              aria-label="Download generated image"
+            >
+              <DownloadIcon className="w-5 h-5" />
+              Download Image
+            </a>
+            <button
+              onClick={onFindSalons}
+              disabled={isFindingSalons}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 font-semibold text-white bg-teal-500 rounded-full transition-all duration-300 transform hover:scale-105 hover:bg-teal-600 hover:shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+              aria-label="Find nearby salons"
+            >
+              <LocationIcon className="w-5 h-5" />
+              {isFindingSalons ? 'Searching...' : 'Find Salons Nearby'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
